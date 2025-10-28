@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:diety/presentation/screens/categorie/categorie_screen.dart';
 
+/* ----------  MODEL  ---------- */
 class CalorieData {
   final String imagePath;
   final String calorieRange;
   final bool check;
+
   const CalorieData({
     required this.imagePath,
     required this.calorieRange,
@@ -11,6 +15,7 @@ class CalorieData {
   });
 }
 
+/* ----------  CARD  ---------- */
 class CalorieCard extends StatelessWidget {
   final String imagePath;
   final String calorieRange;
@@ -35,10 +40,8 @@ class CalorieCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 130,
-        height: 130,
-        padding: const EdgeInsets.all(12),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -58,40 +61,47 @@ class CalorieCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /* ----  image  ---- */
             Image.asset(
               imagePath,
-              width: 40,
-              height: 40,
+              width: 32,
+              height: 32,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 40,
-                  height: 40,
-                  child: Icon(Icons.broken_image, size: 24),
-                );
-              },
+              errorBuilder: (_, __, ___) =>
+                  const Icon(Icons.broken_image, size: 24),
             ),
-            SizedBox(height: 15),
-            Text(
-              calorieRange,
-              style: const TextStyle(
-                color: textColor,
-                fontSize: 18,
-                height: 1.25,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            check
-                ? Text(
-                    'kcal',
+
+            const SizedBox(height: 8), // reduced from 15
+            /* ----  texts  ---- */
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    calorieRange,
                     style: TextStyle(
                       color: textColor,
-                      fontSize: 18,
-                      height: 1.25,
+                      fontSize: 14,
+                      height: 1.1, // tighter line-spacing
                       fontWeight: FontWeight.w500,
+                      fontFamily: GoogleFonts.tajawal().fontFamily,
                     ),
-                  )
-                : SizedBox(),
+                  ),
+                  if (check)
+                    Text(
+                      'kcal',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        height: 1.1,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: GoogleFonts.tajawal().fontFamily,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -99,10 +109,9 @@ class CalorieCard extends StatelessWidget {
   }
 }
 
-// Your updated, reusable CalorieSelectionScreen widget
+/* ----------  GRID  ---------- */
 class CalorieSelectionScreen extends StatefulWidget {
   final List<CalorieData> items;
-
   const CalorieSelectionScreen({super.key, required this.items});
 
   @override
@@ -115,11 +124,18 @@ class _CalorieSelectionScreenState extends State<CalorieSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Wrap(
-        spacing: 46.0,
-        runSpacing: 26.0,
-        children: List.generate(widget.items.length, (index) {
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: widget.items.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.0, // card is square
+        ),
+        itemBuilder: (context, index) {
           final item = widget.items[index];
           return CalorieCard(
             imagePath: item.imagePath,
@@ -127,13 +143,18 @@ class _CalorieSelectionScreenState extends State<CalorieSelectionScreen> {
             check: item.check,
             isSelected: _selectedIndex == index,
             onTap: () {
-              setState(() {
-                _selectedIndex = index;
-              });
-              print('${item.calorieRange} kcal card selected!');
+              setState(() => _selectedIndex = index);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      CategorieScreen(categoryName: item.calorieRange),
+                ),
+              );
+              debugPrint('${item.calorieRange} kcal card selected!');
             },
           );
-        }),
+        },
       ),
     );
   }

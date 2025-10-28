@@ -1,6 +1,12 @@
 import 'package:diety/core/constants/app_colors.dart';
+import 'package:diety/logic/product_bloc/profil_bloc/profile_bloc.dart';
+import 'package:diety/presentation/screens/login/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,17 +17,73 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _nameController;
+  late TextEditingController _phoneController;
+  final ImagePicker _picker = ImagePicker();
+  File? _selectedImageFile;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: "");
+    _phoneController = TextEditingController(text: "");
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage(BuildContext sheetContext, ImageSource source) async {
+    final XFile? pickedFile = await _picker.pickImage(source: source);
+
+    // Close the bottom sheet first.
+    // ignore: use_build_context_synchronously
+    Navigator.of(sheetContext).pop();
+
+    if (pickedFile != null) {
+      final imageFile = File(pickedFile.path);
+      final fileSizeInBytes = await imageFile.length();
+      final fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+
+      if (fileSizeInMB > 2) {
+        // If the file is too large, show an error and don't proceed.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('حجم الصورة كبير جدا (الحد الأقصى 2 ميجابايت).'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        // If the file size is acceptable, set it for preview and upload.
+        setState(() => _selectedImageFile = imageFile);
+      }
+    }
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => _pickImage(sheetContext, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Camera'),
+              onTap: () => _pickImage(sheetContext, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -31,203 +93,312 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const Color lightText = Color(0x6E262F82);
     const Color lightGreyButton = Color(0xFFBAC1CB);
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: Text(
-          'الحساب الشخصي',
-          style: TextStyle(
-            color: Colors.black,
-            fontFamily: GoogleFonts.tajawal().fontFamily,
+    return BlocProvider(
+      create: (context) => ProfileBloc()..add(ProfileLoadRequested()),
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          automaticallyImplyLeading: false,
+          elevation: 1,
+          centerTitle: true,
+          title: Text(
+            'الحساب الشخصي',
+            style: TextStyle(
+              color: Colors.black,
+              fontFamily: GoogleFonts.tajawal().fontFamily,
+              fontWeight: FontWeight.w400,
+            ),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(
+                Icons.arrow_forward_ios,
+                color: AppColors.black,
+              ), // This icon points back in RTL
+              onPressed: () => Navigator.of(
+                context,
+              ).pop(), // Simply pop the current screen to return
+            ),
+          ],
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
+        body: BlocConsumer<ProfileBloc, ProfileState>(
+          listener: (context, state) {
+            if (state is ProfileLoadSuccess) {
+              _nameController.text = state.user.name;
+              _phoneController.text = state.user.phoneNumber.toString();
+              // If the profile reloads successfully after an update, clear the local image selection.
+              if (_selectedImageFile != null) {
+                setState(() {
+                  _selectedImageFile = null;
+                });
+              }
+            }
+            if (state is ProfileUpdateSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم تحديث الملف الشخصي بنجاح!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+            if (state is ProfileUpdateFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            if (state is ProfileLogoutSuccess) {
+              // Navigate to the login screen and remove all previous routes
+              // to prevent the user from going back to a logged-in screen.
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (Route<dynamic> route) => false,
+              );
+            }
+          },
+          builder: (context, state) {
+            if (state is ProfileLoadInProgress || state is ProfileInitial) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is ProfileLoadFailure) {
+              return const Center(child: Text('فشل تحميل الملف الشخصي.'));
+            }
+            // This condition now correctly handles all states that contain user data.
+            if (state is ProfileLoadSuccess ||
+                state is ProfileUpdateInProgress ||
+                state is ProfileUpdateFailure) {
+              // Extract user data regardless of the specific state type
+              final user = (state as dynamic).user;
+
+              return Directionality(
+                textDirection: TextDirection.rtl, // apply RTL globally
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 23.0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Center(
+                          child: Text(
+                            'مرحبا بيك في حسابك الخاص',
+                            style: TextStyle(
+                              color: primaryBlue,
+                              fontSize: 24,
+                              fontFamily: GoogleFonts.tajawal().fontFamily,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Center(
+                          child: Column(
+                            children: [
+                              if (_selectedImageFile != null)
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundImage: FileImage(
+                                    _selectedImageFile!,
+                                  ),
+                                )
+                              else if (user.image != null)
+                                CachedNetworkImage(
+                                  imageUrl: user.image!,
+                                  imageBuilder: (context, imageProvider) =>
+                                      CircleAvatar(
+                                        radius: 40,
+                                        backgroundImage: imageProvider,
+                                      ),
+                                  placeholder: (context, url) =>
+                                      const CircleAvatar(
+                                        radius: 40,
+                                        child: CircularProgressIndicator(),
+                                      ),
+                                  errorWidget: (context, url, error) =>
+                                      _buildPlaceholderAvatar(primaryBlue),
+                                )
+                              else
+                                _buildPlaceholderAvatar(primaryBlue),
+                              const SizedBox(height: 8),
+                              Text(
+                                'إتنجم تحمل وإلا تغير صورتك حسابك\nبصيغة webp , jpeg أو png.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: lightText.withOpacity(0.7),
+                                  fontSize: 16,
+                                  fontFamily: GoogleFonts.tajawal().fontFamily,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              ElevatedButton.icon(
+                                onPressed: state is ProfileUpdateInProgress
+                                    ? null
+                                    : () {
+                                        if (_selectedImageFile != null) {
+                                          // This is the "Confirm Upload" action
+                                          context.read<ProfileBloc>().add(
+                                            ProfileImageUpdateRequested(
+                                              imageFile: _selectedImageFile!,
+                                            ),
+                                          );
+                                        } else {
+                                          // This is the "Upload Image" action
+                                          _showImagePickerOptions();
+                                        }
+                                      },
+                                icon: const Padding(
+                                  padding: EdgeInsets.only(bottom: 3),
+                                  child: Icon(
+                                    Icons.upload_file_outlined,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                label: Text(
+                                  _selectedImageFile == null
+                                      ? 'تحميل صورة'
+                                      : 'تأكيد تحميل الصورة',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontFamily:
+                                        GoogleFonts.tajawal().fontFamily,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: primaryBlue,
+                                  alignment: Alignment.center,
+                                  minimumSize: const Size(280, 50),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Text(
+                            'الإسم',
+                            style: TextStyle(
+                              color: lightText.withOpacity(0.7),
+                              fontSize: 16,
+                              fontFamily: GoogleFonts.tajawal().fontFamily,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextFormField(
+                          controller: _nameController,
+                          textAlign: TextAlign.right,
+                          decoration: _buildInputDecoration(hintText: 'الإسم'),
+                        ),
+                        const SizedBox(height: 20),
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Text(
+                            textAlign: TextAlign.right,
+                            'رقم الجوال',
+                            style: TextStyle(
+                              color: lightText.withOpacity(0.7),
+                              fontSize: 16,
+                              fontFamily: GoogleFonts.tajawal().fontFamily,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        TextFormField(
+                          controller: _phoneController,
+                          enabled:
+                              false, // Use enabled: false instead of readOnly
+                          textAlign: TextAlign.right,
+                          keyboardType: TextInputType.phone,
+                          decoration: _buildInputDecoration(
+                            hintText: '10 10 10 10',
+                            prefixIcon: const Icon(
+                              Icons.phone_iphone,
+                              color: lightText,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        ElevatedButton(
+                          onPressed: state is ProfileUpdateInProgress
+                              ? null
+                              : () {
+                                  context.read<ProfileBloc>().add(
+                                    ProfileUpdateRequested(
+                                      name: _nameController.text,
+                                      phoneNumber: _phoneController.text,
+                                    ),
+                                  );
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryBlue,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: state is ProfileUpdateInProgress
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                              : Text(
+                                  'تغير الاسم',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontFamily:
+                                        GoogleFonts.tajawal().fontFamily,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<ProfileBloc>().add(LogoutRequested());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: lightGreyButton,
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: GoogleFonts.tajawal().fontFamily,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink(); // Should not be reached
+          },
+        ),
       ),
-      body: Directionality(
-        textDirection: TextDirection.rtl, // apply RTL globally
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 16.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Center(
-                  child: Text(
-                    'مرحبا بيك في حسابك الخاص',
-                    style: TextStyle(
-                      color: const Color(0xFF7695FF),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: GoogleFonts.tajawal().fontFamily,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
+    );
+  }
 
-                // --- Profile Picture Section ---
-                Center(
-                  child: Column(
-                    children: [
-                      const CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.white,
-                        // A border that matches the design
-                        child: CircleAvatar(
-                          radius: 38,
-                          backgroundColor: Color(0xFFF0F6FF),
-                          child: Icon(
-                            Icons.person_outline,
-                            size: 36,
-                            color: primaryBlue,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'إتنجم تحمل وإلا تغير صورتك حسابك\nبصيغة webp , jpeg أو png.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: lightText,
-                          fontSize: 13,
-                          fontFamily: GoogleFonts.tajawal().fontFamily,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.upload_file_outlined,
-                          color: Colors.white,
-                        ),
-                        label: Text(
-                          'تحميل صورة',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontFamily: GoogleFonts.tajawal().fontFamily,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryBlue,
-                          minimumSize: const Size(280, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                // --- Form Section ---
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Text(
-                    'الإسم',
-                    style: TextStyle(
-                      color: lightText,
-                      fontSize: 14,
-                      fontFamily: GoogleFonts.tajawal().fontFamily,
-                    ),
-                    textAlign: TextAlign.right,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                TextFormField(
-                  controller: _nameController,
-                  textAlign: TextAlign.right,
-                  decoration: _buildInputDecoration(hintText: 'الإسم'),
-                ),
-                const SizedBox(height: 20),
-
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Text(
-                    textAlign: TextAlign.right,
-                    'رقم الجوال',
-                    style: TextStyle(
-                      color: lightText,
-                      fontSize: 14,
-                      fontFamily: GoogleFonts.tajawal().fontFamily,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                TextFormField(
-                  textAlign: TextAlign.right,
-                  keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration(
-                    hintText: '10 10 10 10',
-                    prefixIcon: const Icon(
-                      Icons.phone_iphone,
-                      color: lightText,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // --- Action Buttons ---
-                ElevatedButton(
-                  onPressed: () {
-                    // Handle name change logic
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'تغير الاسم',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: GoogleFonts.tajawal().fontFamily,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    // Handle logout logic
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: lightGreyButton,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    'تسجيل الخروج',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: GoogleFonts.tajawal().fontFamily,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 40),
-                Text(
-                  "مرحبا بيكم على دايتي ! تحبوا تتمتعوا بأكلات بنينة وتعرفوا في نفس الوقت على السعرات الحرارية وكل المكونات الغذائية لكل وصفة. تلقاوا عندنا أحسن الوصفات الصحية مع كل المعلومات الغذائية إلي تحتاجوها. معانا، كل شيء متوازن وبنين !",
-                  style: TextStyle(
-                    color: AppColors.black,
-                    fontFamily: GoogleFonts.tajawal().fontFamily,
-                    height: 1.75,
-                    fontWeight: FontWeight.w800,
-                    fontSize: MediaQuery.of(context).size.width * 0.035,
-                  ),
-                ),
-                SizedBox(height: 40),
-              ],
-            ),
-          ),
-        ),
+  Widget _buildPlaceholderAvatar(Color primaryBlue) {
+    return CircleAvatar(
+      radius: 40,
+      backgroundColor: Colors.white,
+      child: CircleAvatar(
+        radius: 38,
+        backgroundColor: const Color(0xFFF0F6FF),
+        child: Icon(Icons.person_outline, size: 36, color: primaryBlue),
       ),
     );
   }
@@ -257,6 +428,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderSide: const BorderSide(color: Color(0xFF007AFF), width: 1.5),
       ),
       disabledBorder: OutlineInputBorder(
+        // Style for the disabled phone number field
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: const Color(0x6E183153).withOpacity(0.2)),
       ),

@@ -1,111 +1,85 @@
 import 'package:diety/core/constants/app_colors.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
+import 'package:diety/data/models/food_item.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+/// --- WIDGETS MODIFIED FOR VERTICAL LIST ---
 
 class FoodListViewHor extends StatefulWidget {
+  final List<FoodItem> foodItems;
+  final Function(int id)? onItemTap;
+
+  const FoodListViewHor({super.key, required this.foodItems, this.onItemTap});
+
   @override
   _FoodListViewHorState createState() => _FoodListViewHorState();
 }
 
-class _FoodListViewHorState extends State<FoodListViewHor>
-    with TickerProviderStateMixin {
-  late ScrollController _scrollController;
-
-  final List<FoodItem> foodItems = [
-    FoodItem(
-      image: 'assets/images/food1.webp',
-      title: 'بروشيتا الكفتة والبطاطا',
-      calories: 40,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food2.webp',
-      title: 'سلطة الخضار المشكلة',
-      calories: 25,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food3.webp',
-      title: 'شوربة العدس الأحمر',
-      calories: 35,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food1.webp',
-      title: 'معكرونة بالصلصة الحمراء',
-      calories: 55,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food2.webp',
-      title: 'دجاج مشوي بالخضار',
-      calories: 65,
-      duration: 'دق',
-    ),
-  ];
-  @override
-  void initState() {
-    super.initState();
-    // Initialize the controller here
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    // Dispose of the controller to free up resources
-    _scrollController.dispose();
-    super.dispose();
-  }
-
+class _FoodListViewHorState extends State<FoodListViewHor> {
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 350,
-      child: ListView.builder(
-        controller: _scrollController,
-        scrollDirection: Axis.vertical,
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        itemCount: foodItems.length,
-        itemBuilder: (context, index) {
-          return Container(
-            width: 280,
-            height: 330.0,
-            margin: const EdgeInsets.only(top: 6.0, bottom: 6.0, left: 25.0),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: widget.foodItems.length,
+      itemBuilder: (context, index) {
+        final item = widget.foodItems[index];
+        return GestureDetector(
+          onTap: () => widget.onItemTap?.call(item.id),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8 - 16,
+            margin: const EdgeInsets.only(bottom: 16.0),
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(12),
-              ),
+              borderRadius: BorderRadius.all(Radius.circular(20)),
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey,
-                  offset: Offset(1.0, 1.0),
-                  blurRadius: 18.0,
+                  offset: Offset(0.0, 1.0),
+                  blurRadius: 7.0,
                 ),
               ],
             ),
-            child: FoodCard(foodItem: foodItems[index]),
-          );
-        },
-      ),
+            child: FoodCardHor(foodItem: item),
+          ),
+        );
+      },
     );
   }
 }
 
-class FoodCard extends StatefulWidget {
+class FoodCardHor extends StatefulWidget {
   final FoodItem foodItem;
-
-  const FoodCard({Key? key, required this.foodItem}) : super(key: key);
+  const FoodCardHor({Key? key, required this.foodItem}) : super(key: key);
 
   @override
-  _FoodCardState createState() => _FoodCardState();
+  _FoodCardHorState createState() => _FoodCardHorState();
 }
 
-class _FoodCardState extends State<FoodCard> {
-  bool isFavorite = false;
+class _FoodCardHorState extends State<FoodCardHor> {
+  final FavoritesManager _favoritesManager = FavoritesManager();
+
+  @override
+  void initState() {
+    super.initState();
+    _favoritesManager.addListener(_onFavoritesChanged);
+  }
+
+  @override
+  void dispose() {
+    _favoritesManager.removeListener(_onFavoritesChanged);
+    super.dispose();
+  }
+
+  void _onFavoritesChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isFavorite = _favoritesManager.isFavorite(widget.foodItem.id);
     return Stack(
       children: [
         Container(
@@ -126,108 +100,140 @@ class _FoodCardState extends State<FoodCard> {
             children: [
               Container(
                 width: double.infinity,
-                height: 200,
+                height: 400,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                  image: DecorationImage(
-                    image: AssetImage(widget.foodItem.image),
-                    fit: BoxFit.cover,
+                ),
+                child: CachedNetworkImage(
+                  imageUrl: widget.foodItem.image,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) =>
+                      const Center(child: CircularProgressIndicator()),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[200],
+                    child: Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey[400],
+                    ),
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.all(9),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 5),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: 9,
+                      bottom: 9,
+                      right: 25,
+                      left: 20,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Calories
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Image.asset(
-                              "assets/images/flame.png",
-                              width: 15,
-                              height: 15,
+                            // Calories
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(top: 5.0),
+                                  child: Image.asset(
+                                    "assets/images/flame.png",
+                                    width: 15,
+                                    height: 15,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Padding(
+                                  padding: EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    'Kcal',
+                                    style: GoogleFonts.tajawal(
+                                      fontSize: 16,
+                                      color: AppColors.timecard,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  '${widget.foodItem.calories}',
+                                  style: GoogleFonts.tajawal(
+                                    fontSize: 20,
+                                    color: AppColors.timecard,
+                                    //fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                                SizedBox(width: 2),
+                              ],
                             ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Kcal',
-                              style: GoogleFonts.tajawal(
-                                fontSize: 16,
-                                color: AppColors.timecard,
-                              ),
+                            SizedBox(width: 15),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(top: 3.0),
+                                  child: Opacity(
+                                    opacity: 0.75,
+                                    child: Icon(
+                                      Icons.access_time,
+                                      size: 15,
+                                      color: AppColors.timecard,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Opacity(
+                                  opacity: 0.75,
+                                  child: Text(
+                                    "${widget.foodItem.duration} دق",
+                                    style: GoogleFonts.tajawal(
+                                      fontSize: 16,
+                                      color: AppColors.timecard,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 4),
-                            Text(
-                              '${widget.foodItem.calories}',
-                              style: GoogleFonts.tajawal(
-                                fontSize: 16,
-                                color: AppColors.timecard,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            SizedBox(width: 2),
                           ],
                         ),
-                        SizedBox(width: 15),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Opacity(
-                              opacity: 0.75,
-                              child: Icon(
-                                Icons.access_time,
-                                size: 15,
-                                color: AppColors.timecard,
-                              ),
+
+                        SizedBox(height: 5),
+
+                        // Title
+                        SizedBox(
+                          width: MediaQuery.of(context).size.width * 0.8 - 54,
+                          height: 45,
+                          child: Text(
+                            widget.foodItem.title,
+                            style: GoogleFonts.tajawal(
+                              fontSize: 18,
+                              //fontWeight: FontWeight.bold,
+                              color: AppColors.titlecard,
                             ),
-                            SizedBox(width: 4),
-                            Opacity(
-                              opacity: 0.75,
-                              child: Text(
-                                '${widget.foodItem.calories} ${widget.foodItem.duration}',
-                                style: GoogleFonts.tajawal(
-                                  fontSize: 16,
-                                  color: AppColors.timecard,
-                                ),
-                              ),
-                            ),
-                          ],
+                            textAlign: TextAlign.start,
+                            maxLines: 2,
+                          ),
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 12),
-
-                    // Title
-                    Text(
-                      widget.foodItem.title,
-                      style: GoogleFonts.tajawal(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.titlecard,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+              SizedBox(height: 10),
             ],
           ),
         ),
-
         Positioned(
-          top: 180,
+          top: 380,
           left: 12,
           child: GestureDetector(
-            onTap: () {
-              setState(() {
-                isFavorite = !isFavorite;
-              });
-            },
+            onTap: () => _favoritesManager.toggleFavorite(
+              widget.foodItem.id,
+              context: context,
+            ),
             child: Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -242,7 +248,7 @@ class _FoodCardState extends State<FoodCard> {
                 ],
               ),
               child: Icon(
-                Icons.favorite_border,
+                isFavorite ? Icons.favorite : Icons.favorite_border,
                 color: isFavorite ? Colors.white : AppColors.favcard,
                 size: 20,
               ),
@@ -252,18 +258,4 @@ class _FoodCardState extends State<FoodCard> {
       ],
     );
   }
-}
-
-class FoodItem {
-  final String image;
-  final String title;
-  final int calories;
-  final String duration;
-
-  FoodItem({
-    required this.image,
-    required this.title,
-    required this.calories,
-    required this.duration,
-  });
 }

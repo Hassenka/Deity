@@ -1,7 +1,10 @@
 import 'package:diety/core/constants/app_colors.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
+import 'package:diety/data/models/food_item.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class FoodListView extends StatefulWidget {
   @override
@@ -20,31 +23,8 @@ class _FoodListViewState extends State<FoodListView>
       image: 'assets/images/food1.webp',
       title: 'بروشيتا الكفتة والبطاطا',
       calories: 40,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food2.webp',
-      title: 'سلطة الخضار المشكلة',
-      calories: 25,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food3.webp',
-      title: 'شوربة العدس الأحمر',
-      calories: 35,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food1.webp',
-      title: 'معكرونة بالصلصة الحمراء',
-      calories: 55,
-      duration: 'دق',
-    ),
-    FoodItem(
-      image: 'assets/images/food2.webp',
-      title: 'دجاج مشوي بالخضار',
-      calories: 65,
-      duration: 'دق',
+      duration: 15,
+      id: 1,
     ),
   ];
 
@@ -105,50 +85,56 @@ class _FoodListViewState extends State<FoodListView>
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 320,
-      child: NotificationListener<ScrollNotification>(
-        onNotification: (ScrollNotification notification) {
-          if (notification is ScrollStartNotification) {
-            if (notification.dragDetails != null) {
-              _pauseAutoScroll();
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: SizedBox(
+        height: 470,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification notification) {
+            if (notification is ScrollStartNotification) {
+              if (notification.dragDetails != null) {
+                _pauseAutoScroll();
+              }
+            } else if (notification is ScrollEndNotification) {
+              if (notification.dragDetails != null) {
+                // Resume auto-scroll after user stops scrolling
+                Future.delayed(Duration(seconds: 2), () {
+                  if (mounted) {
+                    _resumeAutoScroll();
+                  }
+                });
+              }
             }
-          } else if (notification is ScrollEndNotification) {
-            if (notification.dragDetails != null) {
-              // Resume auto-scroll after user stops scrolling
-              Future.delayed(Duration(seconds: 2), () {
-                if (mounted) {
-                  _resumeAutoScroll();
-                }
-              });
-            }
-          }
-          return false;
-        },
-        child: ListView.builder(
-          controller: _scrollController,
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          itemCount: foodItems.length,
-          itemBuilder: (context, index) {
-            return Container(
-              width: 280,
-              height: 200.0,
-              margin: const EdgeInsets.only(top: 6.0, bottom: 6.0, left: 25.0),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(5.0),
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey,
-                    offset: Offset(0.0, 1.0), //(x,y)
-                    blurRadius: 16.0,
-                  ),
-                ],
-              ),
-              child: FoodCard(foodItem: foodItems[index]),
-            );
+            return false;
           },
+          child: ListView.builder(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 2.0),
+            itemCount: foodItems.length,
+            itemBuilder: (context, index) {
+              return Container(
+                width: MediaQuery.of(context).size.width * 0.8 - 16,
+                margin: const EdgeInsets.only(
+                  top: 6.0,
+                  bottom: 16.0,
+                  left: 25.0,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey,
+                      offset: Offset(0.0, 1.0), //(x,y)
+                      blurRadius: 7.0,
+                    ),
+                  ],
+                ),
+                child: FoodCard(foodItem: foodItems[index]),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -165,41 +151,61 @@ class FoodCard extends StatefulWidget {
 }
 
 class _FoodCardState extends State<FoodCard> {
-  bool isFavorite = false;
+  final FavoritesManager _favoritesManager = FavoritesManager();
+
+  @override
+  void initState() {
+    super.initState();
+    _favoritesManager.addListener(_onFavoritesChanged);
+  }
+
+  @override
+  void dispose() {
+    _favoritesManager.removeListener(_onFavoritesChanged);
+    super.dispose();
+  }
+
+  void _onFavoritesChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isFavorite = _favoritesManager.isFavorite(widget.foodItem.id);
     return Stack(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 10,
-                offset: Offset(0, 2),
-              ),
-            ],
+        ClipRRect(
+          // This ensures the image has rounded top corners
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(10),
+            topRight: Radius.circular(10),
           ),
+          child: CachedNetworkImage(
+            imageUrl: widget.foodItem.image,
+            placeholder: (context, url) =>
+                const Center(child: CircularProgressIndicator()),
+            errorWidget: (context, url, error) => Container(
+              color: Colors.grey[200],
+              child: Icon(Icons.image_not_supported, color: Colors.grey[400]),
+            ),
+            width: double.infinity,
+            height: 330,
+            fit: BoxFit.cover,
+          ),
+        ),
+        SizedBox(height: 12),
+        Positioned(
+          top: 336,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                height: 200,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                  image: DecorationImage(
-                    image: AssetImage(widget.foodItem.image),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
               Padding(
-                padding: EdgeInsets.all(9),
+                padding: EdgeInsets.only(
+                  top: 9,
+                  bottom: 9,
+                  right: 25,
+                  left: 20,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -209,29 +215,34 @@ class _FoodCardState extends State<FoodCard> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Image.asset(
-                              "assets/images/flame.png",
-                              width: 15,
-                              height: 15,
+                            Padding(
+                              padding: EdgeInsets.only(top: 5.0),
+                              child: Image.asset(
+                                "assets/images/flame.png",
+                                width: 15,
+                                height: 15,
+                              ),
                             ),
                             SizedBox(width: 4),
-                            Text(
-                              'Kcal',
-                              style: GoogleFonts.tajawal(
-                                fontSize: 16,
-                                color: AppColors.timecard,
+                            Padding(
+                              padding: EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                'Kcal',
+                                style: GoogleFonts.tajawal(
+                                  fontSize: 16,
+                                  color: AppColors.timecard,
+                                ),
                               ),
                             ),
                             SizedBox(width: 4),
                             Text(
                               '${widget.foodItem.calories}',
                               style: GoogleFonts.tajawal(
-                                fontSize: 16,
+                                fontSize: 20,
                                 color: AppColors.timecard,
-                                fontWeight: FontWeight.w600,
+                                //fontWeight: FontWeight.w400,
                               ),
                             ),
-
                             SizedBox(width: 2),
                           ],
                         ),
@@ -239,19 +250,22 @@ class _FoodCardState extends State<FoodCard> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Opacity(
-                              opacity: 0.75,
-                              child: Icon(
-                                Icons.access_time,
-                                size: 15,
-                                color: AppColors.timecard,
+                            Padding(
+                              padding: EdgeInsets.only(top: 3.0),
+                              child: Opacity(
+                                opacity: 0.75,
+                                child: Icon(
+                                  Icons.access_time,
+                                  size: 15,
+                                  color: AppColors.timecard,
+                                ),
                               ),
                             ),
                             SizedBox(width: 4),
                             Opacity(
                               opacity: 0.75,
                               child: Text(
-                                '${widget.foodItem.calories} ${widget.foodItem.duration}',
+                                "${widget.foodItem.duration} دق",
                                 style: GoogleFonts.tajawal(
                                   fontSize: 16,
                                   color: AppColors.timecard,
@@ -263,17 +277,22 @@ class _FoodCardState extends State<FoodCard> {
                       ],
                     ),
 
-                    SizedBox(height: 12),
+                    SizedBox(height: 5),
 
                     // Title
-                    Text(
-                      widget.foodItem.title,
-                      style: GoogleFonts.tajawal(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.titlecard,
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.8 - 54,
+                      height: 45,
+                      child: Text(
+                        widget.foodItem.title,
+                        style: GoogleFonts.tajawal(
+                          fontSize: 18,
+                          //fontWeight: FontWeight.bold,
+                          color: AppColors.titlecard,
+                        ),
+                        textAlign: TextAlign.start,
+                        maxLines: 2,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -283,14 +302,13 @@ class _FoodCardState extends State<FoodCard> {
         ),
 
         Positioned(
-          top: 180,
+          top: 310,
           left: 12,
           child: GestureDetector(
-            onTap: () {
-              setState(() {
-                isFavorite = !isFavorite;
-              });
-            },
+            onTap: () => _favoritesManager.toggleFavorite(
+              widget.foodItem.id,
+              context: context,
+            ),
             child: Container(
               padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -305,7 +323,7 @@ class _FoodCardState extends State<FoodCard> {
                 ],
               ),
               child: Icon(
-                Icons.favorite_border,
+                isFavorite ? Icons.favorite : Icons.favorite_border,
                 color: isFavorite ? Colors.white : AppColors.favcard,
                 size: 20,
               ),
@@ -315,18 +333,4 @@ class _FoodCardState extends State<FoodCard> {
       ],
     );
   }
-}
-
-class FoodItem {
-  final String image;
-  final String title;
-  final int calories;
-  final String duration;
-
-  FoodItem({
-    required this.image,
-    required this.title,
-    required this.calories,
-    required this.duration,
-  });
 }

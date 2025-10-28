@@ -1,8 +1,14 @@
 import 'dart:async';
 import 'package:diety/core/constants/app_colors.dart';
+import 'package:diety/data/repositories/notification_provider.dart';
+import 'package:diety/presentation/widgets/internet_connection_wrapper.dart';
+import 'package:diety/presentation/widgets/session_manager.dart';
 import 'package:diety/presentation/screens/login/login_screen.dart';
+import 'package:diety/presentation/widgets/main_menu_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,14 +49,34 @@ class _SplashScreenState extends State<SplashScreen>
     _animationController.forward();
 
     // Navigate to HomeScreen after a total of 6 seconds
-    Timer(const Duration(seconds: 6), () {
-      // Check if the widget is still in the tree to avoid errors
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+    Timer(const Duration(seconds: 6), _checkAuthStatusAndNavigate);
+  }
+
+  void _checkAuthStatusAndNavigate() async {
+    // Ensure the widget is still mounted before performing async operations.
+    if (!mounted) return;
+
+    final sessionManager = SessionManager();
+    final token = await sessionManager.getToken();
+
+    // If the widget is still mounted after the async call, proceed with navigation.
+    if (mounted) {
+      final Widget destination;
+      if (token != null && token.isNotEmpty) {
+        destination = ChangeNotifierProvider(
+          create: (_) => NotificationProvider(),
+          child: const MainScreen(),
         );
+      } else {
+        destination = const LoginScreen();
       }
-    });
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => InternetConnectionWrapper(child: destination),
+        ),
+      );
+    }
   }
 
   @override
@@ -65,7 +91,8 @@ class _SplashScreenState extends State<SplashScreen>
     // and yellow (accent). I've used the primary green to match the website's branding.
     // We can easily add a blue color to `app_colors.dart` if you prefer!
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      // backgroundColor: AppColors.primary,
+      backgroundColor: AppColors.white,
       body: Center(
         child: ScaleTransition(
           scale: _scaleAnimation,
@@ -75,9 +102,10 @@ class _SplashScreenState extends State<SplashScreen>
               "Diety",
               //AppStrings.appName,
               style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                fontFamily: 'Tajawal',
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
+                fontFamily: GoogleFonts.tajawal().fontFamily,
+                color: AppColors.primary,
+                // AppColors.white,
+                //fontWeight: FontWeight.bold,
                 fontSize: 60.sp, // Using .sp for responsive font size
               ),
             ),

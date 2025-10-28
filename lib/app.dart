@@ -5,7 +5,6 @@ import 'package:diety/presentation/screens/splash/splash_screen.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:device_preview/device_preview.dart';
 
 class DietyApp extends StatelessWidget {
   const DietyApp({super.key});
@@ -23,10 +22,6 @@ class DietyApp extends StatelessWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp(
-          // --- Device Preview Configuration ---
-          locale: DevicePreview.locale(context),
-          builder: DevicePreview.appBuilder,
-
           // --- Localization Configuration ---
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
