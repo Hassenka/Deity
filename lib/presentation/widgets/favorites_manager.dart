@@ -7,7 +7,7 @@ import 'package:diety/data/repositories/api_service.dart';
 // Initialize a logger instance for this file
 final _logger = Logger();
 
-class FavoritesManager {
+class FavoritesManager extends ChangeNotifier {
   static final FavoritesManager _instance = FavoritesManager._internal();
   factory FavoritesManager() => _instance;
 
@@ -15,11 +15,6 @@ class FavoritesManager {
 
   final ApiService _apiService = ApiService();
   final Set<int> _favoriteRecipeIds = HashSet<int>();
-
-  // A listener to notify widgets when favorites change.
-  final ValueNotifier<Set<int>> _favoritesNotifier = ValueNotifier<Set<int>>(
-    HashSet<int>(),
-  );
 
   bool isFavorite(int recipeId) {
     return _favoriteRecipeIds.contains(recipeId);
@@ -35,7 +30,7 @@ class FavoritesManager {
             _favoriteRecipeIds.add(r.id!);
           }
         }
-        _favoritesNotifier.value = HashSet<int>.from(_favoriteRecipeIds);
+        notifyListeners();
       }
     } catch (e) {
       _logger.e('Error fetching favorites: $e');
@@ -54,7 +49,7 @@ class FavoritesManager {
     } else {
       _favoriteRecipeIds.remove(recipeId);
     }
-    _favoritesNotifier.value = HashSet<int>.from(_favoriteRecipeIds);
+    notifyListeners();
 
     // Show immediate feedback
     if (context.mounted) {
@@ -78,17 +73,8 @@ class FavoritesManager {
       isNowFavorite
           ? _favoriteRecipeIds.remove(recipeId)
           : _favoriteRecipeIds.add(recipeId);
-      _favoritesNotifier.value = HashSet<int>.from(_favoriteRecipeIds);
+      notifyListeners();
       _logger.e('Failed to toggle favorite on server: $e');
     }
-  }
-
-  // Allow widgets to listen for changes
-  void addListener(VoidCallback listener) {
-    _favoritesNotifier.addListener(listener);
-  }
-
-  void removeListener(VoidCallback listener) {
-    _favoritesNotifier.removeListener(listener);
   }
 }

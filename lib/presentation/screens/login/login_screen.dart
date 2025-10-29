@@ -1,11 +1,14 @@
 import 'package:diety/core/constants/app_colors.dart';
+import 'package:diety/data/repositories/notification_provider.dart';
 import 'package:diety/presentation/widgets/session_manager.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/logic/product_bloc/login_bloc/auth_bloc.dart';
 import 'package:diety/presentation/widgets/main_menu_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -80,7 +83,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const MainScreen(),
+                          builder: (context) => MultiProvider(
+                            providers: [
+                              ChangeNotifierProvider(
+                                create: (_) => NotificationProvider(),
+                              ),
+                              ChangeNotifierProvider.value(
+                                value: FavoritesManager(),
+                              ), // Use .value for singleton
+                            ],
+                            child:
+                                const MainScreen(), // MainScreen will now have access to both
+                          ),
                         ),
                       );
                     } else if (state is AuthFailure) {

@@ -2,6 +2,7 @@ import 'package:diety/core/constants/app_colors.dart';
 import 'package:diety/data/models/notification_model.dart';
 import 'package:diety/data/repositories/notification_provider.dart';
 import 'package:diety/data/repositories/api_service.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/presentation/widgets/right_side_drawer.dart';
 import 'package:diety/presentation/screens/detail/detail_screen.dart';
 import 'package:flutter/material.dart';
@@ -9,33 +10,6 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
 // ignore: depend_on_referenced_packages
 import 'package:provider/provider.dart';
-
-class IngredientsApp extends StatelessWidget {
-  const IngredientsApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // The Directionality widget is crucial for setting the app's layout to Right-to-Left (RTL) for Arabic.
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: MaterialApp(
-        title: 'Flutter Notification UI',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          // Using Google Fonts with a font that supports Arabic well (Cairo).
-          textTheme: GoogleFonts.cairoTextTheme(Theme.of(context).textTheme),
-          scaffoldBackgroundColor: const Color(0xFFF7F7F7),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFFF7F7F7),
-            elevation: 0,
-            iconTheme: IconThemeData(color: Colors.black),
-          ),
-        ),
-        home: const NotificationScreen(),
-      ),
-    );
-  }
-}
 
 // --- The Main Notification Screen Widget ---
 class NotificationScreen extends StatefulWidget {
@@ -141,7 +115,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => DetailScreen(recipeId: notification.elementId!),
+          builder: (newContext) => ChangeNotifierProvider.value(
+            value: context
+                .read<FavoritesManager>(), // Pass the existing instance
+            child: DetailScreen(recipeId: notification.elementId!),
+          ),
         ),
       );
     }

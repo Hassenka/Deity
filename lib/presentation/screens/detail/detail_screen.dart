@@ -1,6 +1,7 @@
 import 'package:diety/core/constants/app_colors.dart';
 import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/logic/product_bloc/detail_bloc/recipe_detail_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:diety/data/models/recipe_detail_model.dart';
 import 'package:flutter/material.dart' hide Step;
 import 'package:flutter/rendering.dart';
@@ -27,7 +28,7 @@ class _DetailScreenState extends State<DetailScreen>
   bool _detailsShown = false;
   Timer? _detailsTimer;
   bool _hasShownTemporaryDetails = false;
-  final FavoritesManager _favoritesManager = FavoritesManager();
+  late FavoritesManager _favoritesManager; // Declare as late
 
   Future<void> _showRecipeDetails({
     double initialSize = 0.8,
@@ -85,10 +86,13 @@ class _DetailScreenState extends State<DetailScreen>
   @override
   void initState() {
     super.initState();
+    _favoritesManager = context.read<FavoritesManager>(); // Initialize here
     // Fetch favorites to ensure the state is up-to-date
-    _favoritesManager.fetchFavorites();
+    _favoritesManager.fetchFavorites(); // This will call the singleton instance
     // Listen for changes in the favorites list to update the UI
-    _favoritesManager.addListener(_onFavoritesChanged);
+    _favoritesManager.addListener(
+      _onFavoritesChanged,
+    ); // Add listener to the instance from context
 
     _barAnimationController = AnimationController(
       vsync: this,

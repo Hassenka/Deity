@@ -45,7 +45,7 @@ class _MainScreenState extends State<MainScreen> {
       context,
       listen: false,
     ).fetchNotificationCount();
-    FavoritesManager().fetchFavorites();
+    context.read<FavoritesManager>().fetchFavorites();
   }
   // Titles for each tab
   //final List<String> _titles = ["الرئيسية", "وصفاتي", "بحث", "حسابي"];
@@ -82,9 +82,17 @@ class _MainScreenState extends State<MainScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ChangeNotifierProvider.value(
-                    value: Provider.of<NotificationProvider>(context),
-                    child: const FilterScreen(),
+                  builder: (_) => MultiProvider(
+                    providers: [
+                      ChangeNotifierProvider.value(
+                        value: context.read<NotificationProvider>(),
+                      ),
+                      ChangeNotifierProvider.value(
+                        value: context.read<FavoritesManager>(),
+                      ),
+                    ],
+                    child:
+                        const FilterScreen(), // Now FilterScreen and its children can access both
                   ),
                 ),
               );
@@ -183,6 +191,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   int get _notificationCount {
-    return Provider.of<NotificationProvider>(context).unreadCount;
+    return context.watch<NotificationProvider>().unreadCount;
   }
 }

@@ -1,5 +1,7 @@
 import 'package:diety/core/constants/app_colors.dart';
 import 'package:diety/data/models/food_item.dart';
+import 'package:diety/data/repositories/notification_provider.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/presentation/widgets/internet_connection_wrapper.dart';
 import 'package:diety/logic/product_bloc/categorie_bloc/categorie_bloc.dart';
 import 'package:diety/presentation/screens/detail/detail_screen.dart';
@@ -9,6 +11,7 @@ import 'package:diety/presentation/widgets/right_side_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 class CategorieScreen extends StatelessWidget {
   final String categoryName;
@@ -94,7 +97,20 @@ class __CategorieScreenViewState extends State<_CategorieScreenView> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => MainScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => MultiProvider(
+                        providers: [
+                          ChangeNotifierProvider(
+                            create: (_) => NotificationProvider(),
+                          ),
+                          ChangeNotifierProvider.value(
+                            value: FavoritesManager(),
+                          ), // Use .value for singleton
+                        ],
+                        child:
+                            const MainScreen(), // MainScreen will now have access to both
+                      ),
+                    ),
                   );
                 },
                 child: Align(
@@ -201,8 +217,10 @@ class __CategorieScreenViewState extends State<_CategorieScreenView> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      DetailScreen(recipeId: itemId),
+                                  builder: (_) => ChangeNotifierProvider.value(
+                                    value: context.read<FavoritesManager>(),
+                                    child: DetailScreen(recipeId: itemId),
+                                  ),
                                 ),
                               );
                             },

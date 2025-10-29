@@ -1,6 +1,7 @@
 import 'package:diety/core/constants/app_colors.dart';
 import 'package:diety/data/models/food_item.dart';
 import 'package:diety/data/models/topic_model.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/logic/product_bloc/type_home_bloc/type_repas_bloc.dart';
 import 'package:diety/logic/product_bloc/home_topic_bloc/topic_bloc.dart';
 import 'package:diety/presentation/widgets/internet_connection_wrapper.dart';
@@ -17,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:diety/presentation/widgets/calorie_selection_screen.dart'
     as calorie_widget;
 
@@ -589,8 +591,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      DetailScreen(recipeId: foodItems[index].id),
+                  builder: (_) => ChangeNotifierProvider.value(
+                    value: context.read<FavoritesManager>(),
+                    child: DetailScreen(recipeId: foodItems[index].id),
+                  ),
                 ),
               );
             },
@@ -641,8 +645,10 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      CategorieScreen(categoryName: item.title),
+                  builder: (_) => ChangeNotifierProvider.value(
+                    value: context.read<FavoritesManager>(),
+                    child: CategorieScreen(categoryName: item.title),
+                  ),
                 ),
               );
             },

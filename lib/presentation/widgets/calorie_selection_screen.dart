@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:diety/presentation/screens/categorie/categorie_screen.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
+import 'package:provider/provider.dart';
 
 /* ----------  MODEL  ---------- */
 class CalorieData {
@@ -147,8 +149,10 @@ class _CalorieSelectionScreenState extends State<CalorieSelectionScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      CategorieScreen(categoryName: item.calorieRange),
+                  builder: (_) => ChangeNotifierProvider.value(
+                    value: context.read<FavoritesManager>(),
+                    child: CategorieScreen(categoryName: item.calorieRange),
+                  ),
                 ),
               );
               debugPrint('${item.calorieRange} kcal card selected!');
