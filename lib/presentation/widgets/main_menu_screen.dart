@@ -40,13 +40,17 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch the user's saved recipes when the main screen loads.
-    Provider.of<NotificationProvider>(
-      context,
-      listen: false,
-    ).fetchNotificationCount();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch the user's saved recipes and notification count when the main screen loads.
+    // didChangeDependencies is called after initState and after the widget's dependencies (like Providers) change.
+    context.read<NotificationProvider>().fetchNotificationCount();
     context.read<FavoritesManager>().fetchFavorites();
   }
+
   // Titles for each tab
   //final List<String> _titles = ["الرئيسية", "وصفاتي", "بحث", "حسابي"];
 

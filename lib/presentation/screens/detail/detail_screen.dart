@@ -86,13 +86,6 @@ class _DetailScreenState extends State<DetailScreen>
   @override
   void initState() {
     super.initState();
-    _favoritesManager = context.read<FavoritesManager>(); // Initialize here
-    // Fetch favorites to ensure the state is up-to-date
-    _favoritesManager.fetchFavorites(); // This will call the singleton instance
-    // Listen for changes in the favorites list to update the UI
-    _favoritesManager.addListener(
-      _onFavoritesChanged,
-    ); // Add listener to the instance from context
 
     _barAnimationController = AnimationController(
       vsync: this,
@@ -116,6 +109,17 @@ class _DetailScreenState extends State<DetailScreen>
   }
 
   void _onFavoritesChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _favoritesManager = context.read<FavoritesManager>();
+    _favoritesManager.fetchFavorites();
+    _favoritesManager.addListener(_onFavoritesChanged);
     if (mounted) {
       setState(() {});
     }

@@ -1,6 +1,7 @@
 import 'package:diety/core/constants/app_colors.dart';
 import 'package:diety/data/models/food_item.dart';
 import 'package:diety/data/models/recipe_model.dart'; // For Recipes type
+import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/logic/product_bloc/search_bloc/search_bloc.dart';
 import 'package:diety/presentation/widgets/list_product_hor.dart';
 import 'package:diety/presentation/widgets/internet_connection_wrapper.dart';
@@ -9,6 +10,7 @@ import 'package:logger/logger.dart'; // Import logger
 import 'package:diety/presentation/widgets/session_manager.dart';
 import 'package:diety/presentation/widgets/right_side_drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -332,7 +334,10 @@ class __DietySearchScreenViewState extends State<_DietySearchScreenView> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => DetailScreen(recipeId: itemId),
+                builder: (_) => ChangeNotifierProvider.value(
+                  value: context.read<FavoritesManager>(),
+                  child: DetailScreen(recipeId: itemId),
+                ),
               ),
             );
           },

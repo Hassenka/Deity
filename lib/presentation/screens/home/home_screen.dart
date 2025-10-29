@@ -1,5 +1,6 @@
 import 'package:diety/core/constants/app_colors.dart';
 import 'package:diety/data/models/food_item.dart';
+import 'package:diety/data/repositories/notification_provider.dart';
 import 'package:diety/data/models/topic_model.dart';
 import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/logic/product_bloc/type_home_bloc/type_repas_bloc.dart';
@@ -303,7 +304,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => FilterScreen(),
+                                  builder: (_) => MultiProvider(
+                                    providers: [
+                                      ChangeNotifierProvider.value(
+                                        value: context
+                                            .read<NotificationProvider>(),
+                                      ),
+                                      ChangeNotifierProvider.value(
+                                        value: context.read<FavoritesManager>(),
+                                      ),
+                                    ],
+                                    child: const FilterScreen(),
+                                  ),
                                 ),
                               );
                             },

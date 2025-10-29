@@ -8,9 +8,11 @@ import 'package:diety/presentation/screens/detail/detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:diety/presentation/widgets/right_side_drawer.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:diety/presentation/widgets/favorites_manager.dart';
 
 class FilterScreen extends StatefulWidget {
   const FilterScreen({super.key});
@@ -775,7 +777,10 @@ class _FilterScreenState extends State<FilterScreen>
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => DetailScreen(recipeId: itemId),
+                builder: (_) => ChangeNotifierProvider.value(
+                  value: context.read<FavoritesManager>(),
+                  child: DetailScreen(recipeId: itemId),
+                ),
               ),
             );
           },
