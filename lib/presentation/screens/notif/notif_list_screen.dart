@@ -104,7 +104,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
           const SnackBar(
             backgroundColor: Colors.white,
             elevation: 0,
-            content: GradientSnackBarContent(message: 'تم حفظ الوصفة بنجاح!'),
+            content: GradientSnackBarContent(
+              message: 'تم حفظ الوصفة بنجاح!',
+              icon: Icons.check_circle_outline,
+              iconColor: Colors.green,
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -113,7 +117,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
           SnackBar(
             backgroundColor: Colors.white,
             elevation: 0,
-            content: GradientSnackBarContent(message: 'فشل حفظ الوصفة: $e'),
+            content: GradientSnackBarContent(
+              message: 'فشل حفظ الوصفة: $e',
+              icon: Icons.remove_circle_outline,
+              iconColor: Colors.red,
+            ),
           ),
         );
       }
