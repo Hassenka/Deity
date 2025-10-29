@@ -51,7 +51,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
           elevation: 0,
           content: GradientSnackBarContent(
             message: 'Failed to mark as read: $e',
@@ -75,7 +75,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
           elevation: 0,
           content: GradientSnackBarContent(message: 'تم الحذف بنجاح!'),
           behavior: SnackBarBehavior.floating,
@@ -84,7 +84,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
           elevation: 0,
           content: GradientSnackBarContent(
             message: 'Failed to delete notification: $e',
@@ -102,7 +102,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         await _apiService.saveRecipe(notification.elementId!);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            backgroundColor: Colors.transparent,
+            backgroundColor: Colors.white,
             elevation: 0,
             content: GradientSnackBarContent(message: 'تم حفظ الوصفة بنجاح!'),
             behavior: SnackBarBehavior.floating,
@@ -111,7 +111,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Colors.transparent,
+            backgroundColor: Colors.white,
             elevation: 0,
             content: GradientSnackBarContent(message: 'فشل حفظ الوصفة: $e'),
           ),
@@ -120,7 +120,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
           elevation: 0,
           content: GradientSnackBarContent(
             message: 'لا توجد وصفة مرتبطة بهذا الإشعار.',

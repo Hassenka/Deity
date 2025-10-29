@@ -53,7 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              backgroundColor: Colors.transparent,
+              backgroundColor: Colors.white,
               elevation: 0,
               content: GradientSnackBarContent(
                 message: 'حجم الصورة كبير جدا (الحد الأقصى 2 ميجابايت).',
@@ -141,7 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (state is ProfileUpdateSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  backgroundColor: Colors.transparent,
+                  backgroundColor: Colors.white,
                   elevation: 0,
                   content: GradientSnackBarContent(
                     message: 'تم تحديث الملف الشخصي بنجاح!',
@@ -153,7 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (state is ProfileUpdateFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  backgroundColor: Colors.transparent,
+                  backgroundColor: Colors.white,
                   elevation: 0,
                   content: GradientSnackBarContent(
                     message: state.error,

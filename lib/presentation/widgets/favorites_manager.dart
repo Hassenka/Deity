@@ -56,7 +56,7 @@ class FavoritesManager extends ChangeNotifier {
         if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white,
           elevation: 0,
           content: GradientSnackBarContent(
             message: isNowFavorite ? 'تم حفظ الوصفة' : 'تم حذف الوصفة',

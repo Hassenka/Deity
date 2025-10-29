@@ -213,7 +213,7 @@ class _FilterScreenState extends State<FilterScreen>
                                 if (state is FilterLoadFailure) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      backgroundColor: Colors.transparent,
+                                      backgroundColor: Colors.white,
                                       elevation: 0,
                                       content: GradientSnackBarContent(
                                         message: 'Error: ${state.error}',
@@ -615,7 +615,7 @@ class _FilterScreenState extends State<FilterScreen>
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              backgroundColor: Colors.transparent,
+              backgroundColor: Colors.white,
               elevation: 0,
               content: GradientSnackBarContent(
                 message: 'جاري البحث...',
