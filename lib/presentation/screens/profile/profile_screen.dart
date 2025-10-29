@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:diety/presentation/widgets/gradient_snackbar.dart';
 import 'dart:io';
 
 class ProfileScreen extends StatefulWidget {
@@ -52,8 +53,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('حجم الصورة كبير جدا (الحد الأقصى 2 ميجابايت).'),
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              content: GradientSnackBarContent(
+                message: 'حجم الصورة كبير جدا (الحد الأقصى 2 ميجابايت).',
+                icon: Icons.error_outline,
+              ),
             ),
           );
         }
@@ -136,16 +141,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (state is ProfileUpdateSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('تم تحديث الملف الشخصي بنجاح!'),
-                  backgroundColor: Colors.green,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  content: GradientSnackBarContent(
+                    message: 'تم تحديث الملف الشخصي بنجاح!',
+                    icon: Icons.check_circle_outline,
+                  ),
                 ),
               );
             }
             if (state is ProfileUpdateFailure) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(state.error),
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  content: GradientSnackBarContent(
+                    message: state.error,
+                    icon: Icons.error_outline,
+                  ),
                 ),
               );
             }

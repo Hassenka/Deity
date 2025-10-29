@@ -7,6 +7,7 @@ import 'package:diety/presentation/widgets/main_menu_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:diety/presentation/widgets/gradient_snackbar.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -66,13 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
       create: (context) => AuthBloc(),
       child: Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFE6F0FF), Colors.white],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
+          color: AppColors.primary,
+          // decoration: const BoxDecoration(
+          //   gradient: LinearGradient(
+          //     colors: [Color(0xFFE6F0FF), Colors.white],
+          //     begin: Alignment.topCenter,
+          //     end: Alignment.bottomCenter,
+          //   ),
+          // ),
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -114,27 +116,14 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Colors.red, width: 1),
-        ),
         margin: const EdgeInsets.all(16),
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontFamily: GoogleFonts.tajawal().fontFamily,
-                ),
-              ),
-            ),
-          ],
+        content: GradientSnackBarContent(
+          message: message,
+          icon: Icons.error_outline,
+          iconColor: Colors.red,
         ),
       ),
     );
@@ -312,7 +301,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _isButtonEnabled
-                          ? AppColors.primaryBlue
+                          ? Color(0xFFA594F9)
+                          // AppColors.primaryBlue
                           : AppColors.disabledGrey,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

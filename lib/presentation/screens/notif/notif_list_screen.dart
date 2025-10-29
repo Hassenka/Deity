@@ -4,6 +4,7 @@ import 'package:diety/data/repositories/notification_provider.dart';
 import 'package:diety/data/repositories/api_service.dart';
 import 'package:diety/presentation/widgets/favorites_manager.dart';
 import 'package:diety/presentation/widgets/right_side_drawer.dart';
+import 'package:diety/presentation/widgets/gradient_snackbar.dart';
 import 'package:diety/presentation/screens/detail/detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -48,9 +49,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ).fetchNotificationCount();
       _loadNotifications();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to mark as read: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          content: GradientSnackBarContent(
+            message: 'Failed to mark as read: $e',
+          ),
+        ),
+      );
     }
   }
 
@@ -68,13 +75,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم الحذف بنجاح!'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          content: GradientSnackBarContent(message: 'تم الحذف بنجاح!'),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete notification: $e')),
+        SnackBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          content: GradientSnackBarContent(
+            message: 'Failed to delete notification: $e',
+          ),
+        ),
       );
     }
   }
@@ -87,19 +102,29 @@ class _NotificationScreenState extends State<NotificationScreen> {
         await _apiService.saveRecipe(notification.elementId!);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم حفظ الوصفة بنجاح!'),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: GradientSnackBarContent(message: 'تم حفظ الوصفة بنجاح!'),
             behavior: SnackBarBehavior.floating,
           ),
         );
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('فشل حفظ الوصفة: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: GradientSnackBarContent(message: 'فشل حفظ الوصفة: $e'),
+          ),
+        );
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('لا توجد وصفة مرتبطة بهذا الإشعار.'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          content: GradientSnackBarContent(
+            message: 'لا توجد وصفة مرتبطة بهذا الإشعار.',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );

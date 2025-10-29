@@ -13,6 +13,7 @@ import 'package:diety/presentation/widgets/right_side_drawer.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:diety/presentation/widgets/favorites_manager.dart';
+import 'package:diety/presentation/widgets/gradient_snackbar.dart';
 
 class FilterScreen extends StatefulWidget {
   const FilterScreen({super.key});
@@ -212,7 +213,11 @@ class _FilterScreenState extends State<FilterScreen>
                                 if (state is FilterLoadFailure) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Error: ${state.error}'),
+                                      backgroundColor: Colors.transparent,
+                                      elevation: 0,
+                                      content: GradientSnackBarContent(
+                                        message: 'Error: ${state.error}',
+                                      ),
                                     ),
                                   );
                                 }
@@ -610,8 +615,13 @@ class _FilterScreenState extends State<FilterScreen>
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('جاري البحث...'),
-              duration: Duration(seconds: 1),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              content: GradientSnackBarContent(
+                message: 'جاري البحث...',
+                icon: Icons.search,
+              ),
+              duration: Duration(seconds: 2),
             ),
           );
         },
@@ -628,8 +638,8 @@ class _FilterScreenState extends State<FilterScreen>
         icon: const Icon(Icons.search, color: Colors.white),
         style: ElevatedButton.styleFrom(
           // Consider adding this color to AppColors if it's a theme color
-          backgroundColor: AppColors
-              .primary, // Using AppColors.primary as an example, or define a new color
+          backgroundColor: Color(0xFFA594F9),
+          //  AppColors.primary, // Using AppColors.primary as an example, or define a new color
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(vertical: 14),
           minimumSize: const Size(double.infinity, 50),

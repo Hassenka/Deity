@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart'; // Import logger
+import 'package:diety/presentation/widgets/gradient_snackbar.dart';
 import 'package:diety/data/repositories/api_service.dart';
 
 // Initialize a logger instance for this file
@@ -52,15 +53,19 @@ class FavoritesManager extends ChangeNotifier {
     notifyListeners();
 
     // Show immediate feedback
-    if (context.mounted) {
+        if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isNowFavorite ? 'تم حفظ الوصفة' : 'تم حذف الوصفة',
-            textAlign: TextAlign.center,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          content: GradientSnackBarContent(
+            message: isNowFavorite ? 'تم حفظ الوصفة' : 'تم حذف الوصفة',
+            icon: isNowFavorite
+                ? Icons.check_circle_outline
+                : Icons.remove_circle_outline,
+            iconColor: isNowFavorite ? Colors.green : Colors.red,
           ),
-          backgroundColor: isNowFavorite ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 1),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
