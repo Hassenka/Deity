@@ -77,7 +77,8 @@ class _RightSideDrawerState extends State<RightSideDrawer> {
             const SizedBox(height: 10),
             _buildDrawerItem(
               context: context,
-              icon: 'assets/images/face-menu.svg',
+              icon: 'assets/images/mimou.svg',
+              //face-menu.svg',
               title: 'حسابي',
               screen: ProfileScreen(),
             ),
@@ -91,7 +92,8 @@ class _RightSideDrawerState extends State<RightSideDrawer> {
             const SizedBox(height: 10),
             _buildDrawerItem(
               context: context,
-              icon: 'assets/images/prv_menu.svg',
+              icon: 'assets/images/center.svg',
+              //prv_menu.svg',
               title: 'سياسة الخصوصية',
               screen: TermsScreen(),
             ),
@@ -115,7 +117,8 @@ class _RightSideDrawerState extends State<RightSideDrawer> {
 
             _buildDrawerItem(
               context: context,
-              icon: 'assets/images/out_side_menu.svg',
+              icon: 'assets/images/out.svg',
+              //out_side_menu.svg',
               title: 'تسجيل الخروج',
               screen: LoginScreen(),
               onTap: () async {

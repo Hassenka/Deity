@@ -285,10 +285,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                             MainAxisAlignment.center,
                                         children: [
                                           Image.asset(
-                                            'assets/images/poubelle.png', // Assumed asset path
+                                            'assets/images/del.png',
+                                            //poubelle.png', // Assumed asset path
                                             color: Colors.white,
-                                            width: 24,
-                                            height: 24,
+                                            // width: 24,
+                                            // height: 24,
                                           ),
                                           const SizedBox(height: 4),
                                           const Text(
@@ -312,10 +313,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                               MainAxisAlignment.center,
                                           children: [
                                             Image.asset(
-                                              'assets/images/bookmark.png', // Assumed asset path
+                                              'assets/images/fav.png',
+
+                                              //bookmark.png', // Assumed asset path
                                               color: Colors.white,
-                                              width: 24,
-                                              height: 24,
+                                              // width: 24,
+                                              // height: 24,
                                             ),
                                             const SizedBox(height: 4),
                                             const Text(
