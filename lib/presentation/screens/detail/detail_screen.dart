@@ -9,6 +9,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:async';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -25,6 +26,7 @@ class _DetailScreenState extends State<DetailScreen>
   late Animation<double> _barAnimation;
   late AnimationController _favoriteAnimationController;
   late Animation<double> _favoriteAnimation;
+  String? _initialSection;
   bool _detailsShown = false;
   Timer? _detailsTimer;
   bool _hasShownTemporaryDetails = false;
@@ -39,6 +41,9 @@ class _DetailScreenState extends State<DetailScreen>
 
     if (_detailsShown) return;
     setState(() => _detailsShown = true);
+
+    // Cancel any existing timer to prevent premature closing
+    _detailsTimer?.cancel();
 
     await showModalBottomSheet(
       context: context,
@@ -58,6 +63,7 @@ class _DetailScreenState extends State<DetailScreen>
               child: RecipeDetailSheet(
                 recipe: state.recipe,
                 scrollController: scrollController,
+                initialSection: _initialSection,
               ),
             );
           },
@@ -66,6 +72,51 @@ class _DetailScreenState extends State<DetailScreen>
     );
 
     if (mounted) setState(() => _detailsShown = false);
+    _initialSection = null; // Reset after sheet is closed
+  }
+
+  // Add this method
+  void _showSectionMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.analytics),
+                title: const Text('القيم الغذائية'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _initialSection = 'القيم الغذائية';
+                  _showRecipeDetails(context: context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shopping_basket),
+                title: const Text('المكونات'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _initialSection = 'المكونات';
+                  _showRecipeDetails(context: context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.list_alt),
+                title: const Text('الطريقة'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _initialSection = 'الطريقة';
+                  _showRecipeDetails(context: context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showTemporaryDetails(BuildContext context) {
@@ -227,6 +278,10 @@ class _DetailScreenState extends State<DetailScreen>
                     right: MediaQuery.of(context).size.width * 0.06,
                     child: GestureDetector(
                       onTap: () => _showRecipeDetails(context: context),
+                      onLongPress: () {
+                        // Show a menu to select section
+                        _showSectionMenu(context);
+                      },
                       child: ScaleTransition(
                         scale: _barAnimation,
                         child: Column(
@@ -537,11 +592,13 @@ class _FullScreenVideoPlayerState extends State<_FullScreenVideoPlayer> {
 class RecipeDetailSheet extends StatefulWidget {
   final RecipeDetailModel recipe;
   final ScrollController scrollController;
+  final String? initialSection;
 
   const RecipeDetailSheet({
     super.key,
     required this.recipe,
     required this.scrollController,
+    this.initialSection,
   });
 
   @override
@@ -551,21 +608,20 @@ class RecipeDetailSheet extends StatefulWidget {
 class _RecipeDetailSheetState extends State<RecipeDetailSheet>
     with TickerProviderStateMixin {
   late int _servings;
-  final GlobalKey _nutritionKey = GlobalKey();
-  final GlobalKey _ingredientsKey = GlobalKey();
-  final GlobalKey _directionsKey = GlobalKey();
+  final ItemScrollController _itemScrollController = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener =
+      ItemPositionsListener.create();
   String _activeSection = 'القيم الغذائية';
+  bool _showStickyNav = false;
   bool _isScrolling = false;
-  Timer? _scrollEndTimer;
   late AnimationController _headerAnimationController;
   late Animation<Offset> _headerSlideAnimation;
   late Animation<double> _headerFadeAnimation;
-
   @override
   void initState() {
     super.initState();
     _servings = widget.recipe.nbrServes ?? 1;
-    widget.scrollController.addListener(_onScroll);
+    _itemPositionsListener.itemPositions.addListener(_onScroll);
 
     _headerAnimationController = AnimationController(
       vsync: this,
@@ -573,7 +629,7 @@ class _RecipeDetailSheetState extends State<RecipeDetailSheet>
     );
 
     _headerSlideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+        Tween<Offset>(begin: const Offset(0, 0.95), end: Offset.zero).animate(
           CurvedAnimation(
             parent: _headerAnimationController,
             curve: Curves.easeOutCubic,
@@ -586,90 +642,81 @@ class _RecipeDetailSheetState extends State<RecipeDetailSheet>
 
     // Start the animation when the sheet is built
     _headerAnimationController.forward();
+
+    if (widget.initialSection != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        int? index;
+        if (widget.initialSection == 'المكونات') {
+          index = 1;
+        } else if (widget.initialSection == 'الطريقة') {
+          index = 2;
+        } else if (widget.initialSection == 'القيم الغذائية') {
+          // The first item is a combination of header and nutrition, so we scroll to index 0
+          index = 0;
+        }
+        if (index != null) _scrollToSection(index);
+      });
+    }
   }
 
+  // This function is called when the user scrolls within the recipe details sheet.
   void _onScroll() {
     if (_isScrolling) return;
 
-    const stickyHeaderHeight = 80.0;
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty) return;
 
-    final scrollPosition = widget.scrollController.offset;
-    final nutritionOffset = _getSectionOffset(_nutritionKey);
-    final ingredientsOffset = _getSectionOffset(_ingredientsKey);
-    final directionsOffset = _getSectionOffset(_directionsKey);
+    // Find the item that is closest to the top of the viewport.
+    final firstVisibleIndex = positions
+        .where((p) => p.itemLeadingEdge < 1)
+        .reduce((max, p) => p.itemLeadingEdge > max.itemLeadingEdge ? p : max)
+        .index;
 
-    String newSection = 'القيم الغذائية';
-    // A section is active if the scroll position is at or past its starting offset,
-    // adjusted for the sticky header's height. A -1 buffer helps with precision.
-    if (directionsOffset.isFinite &&
-        scrollPosition >= directionsOffset - stickyHeaderHeight - 1) {
-      newSection = 'الطريقة';
-    } else if (ingredientsOffset.isFinite &&
-        scrollPosition >= ingredientsOffset - stickyHeaderHeight - 1) {
-      newSection = 'المكونات';
-    } else if (nutritionOffset.isFinite &&
-        scrollPosition >= nutritionOffset - stickyHeaderHeight - 1) {
-      newSection = 'القيم الغذائية';
+    final sections = ['القيم الغذائية', 'المكونات', 'الطريقة'];
+    if (firstVisibleIndex < sections.length &&
+        _activeSection != sections[firstVisibleIndex]) {
+      setState(() {
+        _activeSection = sections[firstVisibleIndex];
+      });
     }
 
-    if (newSection != _activeSection) {
-      setState(() => _activeSection = newSection);
+    // --- New logic to control sticky nav visibility ---
+    // Check if the first item (containing the header) is scrolled up.
+    final firstItem = positions.firstWhere(
+      (p) => p.index == 0,
+      orElse: () => const ItemPosition(
+        index: -1,
+        itemLeadingEdge: 0,
+        itemTrailingEdge: 0,
+      ),
+    );
+
+    // Show sticky nav if scrolled past 20% of the first item's height.
+    // Assuming the first item (index 0) is the main content area to check against.
+    if (firstItem.itemLeadingEdge < -0.20) {
+      if (!_showStickyNav) setState(() => _showStickyNav = true);
+    } else if (firstItem.itemLeadingEdge > -00) {
+      if (_showStickyNav) setState(() => _showStickyNav = false);
     }
   }
 
-  /// Calculates the scroll offset needed to bring the widget associated with the [key]
-  /// to the top of the viewport.
-  double _getSectionOffset(GlobalKey key) {
-    final context = key.currentContext;
-    if (context == null) return double.infinity;
-
-    final viewport = RenderAbstractViewport.of(context.findRenderObject());
-
-    // This is the most reliable way to get the offset of a render object
-    // within its viewport.
-    return viewport.getOffsetToReveal(context.findRenderObject()!, 0.0).offset;
-  }
-
-  void _scrollToSection(GlobalKey key) {
+  void _scrollToSection(int index) {
     _isScrolling = true;
-    _scrollEndTimer?.cancel();
-
-    const stickyHeaderHeight = 80.0;
-    final targetOffset = _getSectionOffset(key);
-
-    // Uncomment these print statements to debug the scroll target
-    // print('[_scrollToSection] Attempting to scroll to ${key.runtimeType}');
-    // print('[_scrollToSection] targetOffset: $targetOffset, stickyHeaderHeight: $stickyHeaderHeight');
-
-    if (targetOffset == double.infinity) {
-      _isScrolling = false;
-      return;
-    }
-
-    // Calculate the final scroll position.
-    // We subtract the stickyHeaderHeight so the section appears just below the header.
-    final finalScrollPosition = targetOffset - stickyHeaderHeight;
-    // print('[_scrollToSection] Final scroll position: $finalScrollPosition');
-
-    widget.scrollController
-        .animateTo(
-          finalScrollPosition,
+    _itemScrollController
+        .scrollTo(
+          index: index,
           duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
+          // Align the item just below the sticky header.
+          // You might need to adjust this value based on the header's height.
+          alignment: 0.05,
         )
-        .whenComplete(() {
-          // Use a timer to prevent the _onScroll listener from firing immediately
-          // at the end of the animation, which could cause a race condition.
-          _scrollEndTimer = Timer(const Duration(milliseconds: 100), () {
-            _isScrolling = false;
-          });
-        });
+        .whenComplete(() => _isScrolling = false);
   }
 
   @override
   void dispose() {
-    widget.scrollController.removeListener(_onScroll);
-    _scrollEndTimer?.cancel();
+    _itemPositionsListener.itemPositions.removeListener(_onScroll);
     _headerAnimationController.dispose();
     super.dispose();
   }
@@ -688,138 +735,98 @@ class _RecipeDetailSheetState extends State<RecipeDetailSheet>
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        // Scrollable Content
-        Expanded(
-          child: CustomScrollView(
-            controller: widget.scrollController,
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                sliver: SliverToBoxAdapter(
-                  child: SlideTransition(
-                    position: _headerSlideAnimation,
-                    child: FadeTransition(
-                      opacity: _headerFadeAnimation,
-                      child: _RecipeHeader(recipe: widget.recipe),
-                    ),
-                  ),
+        // Conditionally display the sticky navigation bar
+        if (_showStickyNav)
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 8.0,
+                ),
+                child: _StickyNav(
+                  activeSection: _activeSection,
+                  onSectionTap: (sectionName) {
+                    final sections = ['القيم الغذائية', 'المكونات', 'الطريقة'];
+                    final sectionIndex = sections.indexOf(sectionName);
+                    if (sectionIndex != -1) {
+                      // The active section is updated optimistically for a faster UI response
+                      setState(() => _activeSection = sectionName);
+                      _scrollToSection(sectionIndex);
+                    }
+                  },
                 ),
               ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _SliverStickyNavDelegate(
-                  child: Container(
-                    color: AppColors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0,
-                      vertical: 12,
-                    ),
-                    child: _StickyNav(
-                      activeSection: _activeSection,
-                      onSectionTap: (key, section) {
-                        setState(() => _activeSection = section);
-                        _scrollToSection(key);
-                      },
-                      keys: {
-                        'القيم الغذائية': _nutritionKey,
-                        'المكونات': _ingredientsKey,
-                        'الطريقة': _directionsKey,
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate.fixed(_buildContentList()),
-                ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                child: Divider(height: 1, color: AppColors.lightGray),
               ),
             ],
+          ),
+        // Scrollable Content
+        Expanded(
+          child: ScrollablePositionedList.builder(
+            itemScrollController: _itemScrollController,
+            itemPositionsListener: _itemPositionsListener,
+            itemCount: 3, // Nutrition, Ingredients, Directions
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: _buildSectionAtIndex(index),
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  List<Widget> _buildContentList() {
-    return [
-      // The GlobalKey for _nutritionKey is implicitly on the _NutritionSection widget itself
-      _NutritionSection(
-        scrollKey: _nutritionKey,
-        recipe: widget.recipe,
-        servings: _servings,
-        onServingsChanged: (newServings) {
-          if (newServings > 0) {
-            setState(() => _servings = newServings);
-          }
-        },
-      ),
-      const SizedBox(height: 32),
-      const _SectionTitle(title: 'الأواني', subtitle: '', icon: "rak.svg"),
-      ...widget.recipe.ustensiles.map(
-        (utensil) => Padding(
-          padding: const EdgeInsets.only(top: 8.0, right: 16.0),
-          child: Row(
-            children: [
-              const Text(
-                '• ',
-                style: TextStyle(fontSize: 18, color: AppColors.darkBluePurple),
+  Widget _buildSectionAtIndex(int index) {
+    switch (index) {
+      case 0:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SlideTransition(
+              position: _headerSlideAnimation,
+              child: FadeTransition(
+                opacity: _headerFadeAnimation,
+                child: _RecipeHeader(recipe: widget.recipe),
               ),
-              Text(
-                utensil.title,
-                style: GoogleFonts.tajawal(
-                  fontSize: 18,
-                  color: AppColors.darkBluePurple,
-                ),
-              ),
-            ],
+            ),
+            _NutritionSection(
+              recipe: widget.recipe,
+              servings: _servings,
+              onServingsChanged: (newServings) {
+                if (newServings > 0) {
+                  setState(() => _servings = newServings);
+                }
+              },
+            ),
+          ],
+        );
+      case 1:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32.0),
+          child: _IngredientsSection(
+            recipe: widget.recipe,
+            servings: _servings,
+            initialServings: widget.recipe.nbrServes ?? 1,
+            onServingsChanged: (newServings) {
+              if (newServings > 0) {
+                setState(() => _servings = newServings);
+              }
+            },
           ),
-        ),
-      ),
-      const SizedBox(height: 32),
-      _IngredientsSection(
-        scrollKey: _ingredientsKey,
-        recipe: widget.recipe,
-        servings: _servings,
-        initialServings: widget.recipe.nbrServes ?? 1,
-        onServingsChanged: (newServings) {
-          if (newServings > 0) {
-            setState(() => _servings = newServings);
-          }
-        },
-      ),
-      const SizedBox(height: 32),
-      // The GlobalKey for _directionsKey is implicitly on the _DirectionsSection widget itself
-      _DirectionsSection(scrollKey: _directionsKey, steps: widget.recipe.steps),
-      const SizedBox(height: 60), // Extra padding at the bottom
-    ];
-  }
-}
-
-class _SliverStickyNavDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _SliverStickyNavDelegate({required this.child});
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return child;
-  }
-
-  @override
-  double get maxExtent => 80.0; // Height of the nav bar + padding
-
-  @override
-  double get minExtent => 80.0;
-
-  @override
-  bool shouldRebuild(_SliverStickyNavDelegate oldDelegate) {
-    return child != oldDelegate.child;
+        );
+      case 2:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32.0),
+          child: _DirectionsSection(steps: widget.recipe.steps),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
 
@@ -1058,14 +1065,9 @@ class _MacroIndicator extends StatelessWidget {
 
 class _StickyNav extends StatefulWidget {
   final String activeSection;
-  final Function(GlobalKey, String) onSectionTap;
-  final Map<String, GlobalKey> keys;
+  final Function(String) onSectionTap;
 
-  const _StickyNav({
-    required this.activeSection,
-    required this.onSectionTap,
-    required this.keys,
-  });
+  const _StickyNav({required this.activeSection, required this.onSectionTap});
 
   @override
   _StickyNavState createState() => _StickyNavState();
@@ -1077,6 +1079,7 @@ class _StickyNavState extends State<_StickyNav> {
     final sections = ['القيم الغذائية', 'المكونات', 'الطريقة'];
 
     return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
       height: 56,
       decoration: BoxDecoration(
         color: AppColors.backgroundGray,
@@ -1125,8 +1128,7 @@ class _StickyNavState extends State<_StickyNav> {
               final isActive = widget.activeSection == section;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () =>
-                      widget.onSectionTap(widget.keys[section]!, section),
+                  onTap: () => widget.onSectionTap(section),
                   child: Container(
                     color: Colors.transparent, // for hit testing
                     child: Center(
@@ -1339,15 +1341,11 @@ class _ServingsSelector extends StatelessWidget {
 }
 
 class _NutritionSection extends StatelessWidget {
-  final GlobalKey? scrollKey;
   final RecipeDetailModel recipe;
   final int servings;
   final ValueChanged<int> onServingsChanged;
 
   const _NutritionSection({
-    // ignore: unused_element_parameter
-    super.key,
-    this.scrollKey,
     required this.recipe,
     required this.servings,
     required this.onServingsChanged,
@@ -1356,7 +1354,6 @@ class _NutritionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      key: scrollKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(
@@ -1480,16 +1477,12 @@ class _NutrientRow extends StatelessWidget {
 }
 
 class _IngredientsSection extends StatelessWidget {
-  final GlobalKey? scrollKey;
   final RecipeDetailModel recipe;
   final int servings;
   final int initialServings;
   final ValueChanged<int> onServingsChanged;
 
   const _IngredientsSection({
-    // ignore: unused_element_parameter
-    super.key,
-    this.scrollKey,
     required this.recipe,
     required this.servings,
     required this.initialServings,
@@ -1501,7 +1494,6 @@ class _IngredientsSection extends StatelessWidget {
     double factor = servings / (initialServings > 0 ? initialServings : 1);
 
     return Column(
-      key: scrollKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(
@@ -1509,7 +1501,6 @@ class _IngredientsSection extends StatelessWidget {
           subtitle: 'Ingredients',
           icon: "rak.svg",
         ),
-
         _ServingsSelector(
           servings: servings,
           onServingsChanged: onServingsChanged,
@@ -1526,7 +1517,6 @@ class _IngredientsSection extends StatelessWidget {
                     group.title,
                     style: GoogleFonts.tajawal(
                       fontSize: 20,
-                      // fontWeight: FontWeight.bold,
                       color: AppColors.darkBluePurple,
                     ),
                   ),
@@ -1547,18 +1537,14 @@ class _IngredientsSection extends StatelessWidget {
 }
 
 class _DirectionsSection extends StatelessWidget {
-  final GlobalKey? scrollKey;
   final List<Step> steps;
-  // ignore: unused_element_parameter
-  const _DirectionsSection({super.key, this.scrollKey, required this.steps});
+  const _DirectionsSection({required this.steps});
 
   @override
   Widget build(BuildContext context) {
     int stepCounter = 0;
 
     return Column(
-      // Ensure the scrollKey is applied here
-      key: scrollKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(
@@ -1593,6 +1579,7 @@ class _DirectionsSection extends StatelessWidget {
             ),
           );
         }),
+        const SizedBox(height: 60),
       ],
     );
   }
