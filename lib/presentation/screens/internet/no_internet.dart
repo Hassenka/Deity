@@ -135,7 +135,10 @@ class _NoInternetScreenState extends State<NoInternetScreen>
           _buildAnimatedCircle(40, 1000),
 
           // Icon WiFi principal
-          Image.asset('assets/images/wifi.png', width: 80, height: 80),
+          Image.asset(
+            'assets/images/wifi_m2.png',
+            //  width: 80, height: 80
+          ),
 
           // // Point d'exclamation
           // Positioned(
@@ -217,7 +220,7 @@ class _NoInternetScreenState extends State<NoInternetScreen>
             const SizedBox(width: 8),
             Text(
               'عاود',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
             ),
           ],
         ),
